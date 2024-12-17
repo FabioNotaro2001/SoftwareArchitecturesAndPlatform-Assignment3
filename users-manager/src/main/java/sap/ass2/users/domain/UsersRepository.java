@@ -6,7 +6,7 @@ import sap.ddd.Repository;
 
 /** Describes the operations that the users service can do with its repository. */
 public interface UsersRepository extends Repository {
-    public void saveUser(User user) throws RepositoryException;
+    public void saveUserEvent(UserEvent event) throws RepositoryException;
     public List<User> getUsers() throws RepositoryException;
     public Optional<User> getUserByID(String id) throws RepositoryException;
 }

@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.kafka.core.KafkaTemplate;
+
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import sap.ass2.users.domain.RepositoryException;
@@ -12,14 +15,18 @@ import sap.ass2.users.domain.UserEventObserver;
 import sap.ass2.users.domain.UsersRepository;
 
 public class UsersManagerImpl implements UsersManagerAPI {
+    private static final String USER_EVENTS_TOPIC = "user-events";
+
     private final UsersRepository userRepository;
     private final List<User> users;
     private List<UserEventObserver> observers;  // observer = UsersManagerVerticle.
+    private KafkaTemplate<String, String> kafkaTemplate;
 
-    public UsersManagerImpl(UsersRepository userRepository) throws RepositoryException {
+    public UsersManagerImpl(UsersRepository userRepository, KafkaTemplate<String, String> kafkaTemplate) throws RepositoryException {
         this.userRepository = userRepository;
         this.observers = Collections.synchronizedList(new ArrayList<>());
         this.users = Collections.synchronizedList(userRepository.getUsers());
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     // Converts an user to a JSON.
@@ -27,6 +34,12 @@ public class UsersManagerImpl implements UsersManagerAPI {
         return new JsonObject()
             .put("userId", user.getId())
             .put("credit", user.getCredit());
+    }
+    
+    private static JsonObject userEventToJSON(String userId, int credits) {
+        return new JsonObject()
+            .put("userId", userId)
+            .put("credits", credits);
     }
 
     @Override
@@ -41,7 +54,8 @@ public class UsersManagerImpl implements UsersManagerAPI {
     @Override
     public JsonObject createUser(String userID) throws RepositoryException {
         var user = new User(userID, 0);
-        this.userRepository.saveUser(user);
+        // this.userRepository.saveUserEvent(user);
+        kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(user.getId(), user.getCredit()).encode());
         this.users.add(user);
         this.notifyObservers(user);
         return UsersManagerImpl.toJSON(user);
@@ -62,7 +76,9 @@ public class UsersManagerImpl implements UsersManagerAPI {
 
         var user = userOpt.get(); 
         user.rechargeCredit(credit); 
-        this.userRepository.saveUser(user); 
+        // this.userRepository.saveUserEvent(user);
+        kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(userID, credit).encode());
+
         this.notifyObservers(user); 
     }
 
@@ -75,7 +91,9 @@ public class UsersManagerImpl implements UsersManagerAPI {
 
         var user = userOpt.get(); 
         user.decreaseCredit(amount); 
-        this.userRepository.saveUser(user); 
+        // this.userRepository.saveUserEvent(user);
+        kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(userID, -amount).encode());
+
         this.notifyObservers(user); 
     }
 

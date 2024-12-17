@@ -20,6 +20,7 @@ services:
       retries: 3
     environment:
       - REGISTRY_URL=http://registry:9000
+      - KAFKA_BROKER_URL=kafka:9092
 
   users:
     build:
@@ -43,6 +44,7 @@ services:
     environment:
       - REGISTRY_URL=http://registry:9000
       - USERS_URL=http://users:9100
+      - KAFKA_BROKER_URL=kafka:9092
 
   ebikes:
     build:
@@ -66,6 +68,7 @@ services:
     environment:
       - REGISTRY_URL=http://registry:9000
       - EBIKES_URL=http://ebikes:9200
+      - KAFKA_BROKER_URL=kafka:9092
 
   apigateway:
     build:
@@ -90,6 +93,7 @@ services:
       - EBIKES_URL=http://ebikes:9200
       - APIGATEWAY_URL=http://apigateway:10000
       - RIDES_URL=http://rides:9300
+      - KAFKA_BROKER_URL=kafka:9092
 
   rides:
     build:
@@ -118,35 +122,74 @@ services:
       - USERS_URL=http://users:9100
       - EBIKES_URL=http://ebikes:9200
       - RIDES_URL=http://rides:9300
+      - KAFKA_BROKER_URL=kafka:9092
     command: >
       sh -c "
       sleep 40;
       mvn exec:java -Dexec.mainClass=sap.ass2.rides.RidesManagerLauncher"
 
-  testrunner:
-    build:
-      context: ./end2end-test
-      dockerfile: docker-maven/Dockerfile
-    image: testrunner
-    container_name: my-test-runner
-    depends_on:
-      - apigateway
-      - registry
-      - users
-      - ebikes
-      - rides
+  # testrunner:
+  #   build:
+  #     context: ./end2end-test
+  #     dockerfile: docker-maven/Dockerfile
+  #   image: testrunner
+  #   container_name: my-test-runner
+  #   depends_on:
+  #     - apigateway
+  #     - registry
+  #     - users
+  #     - ebikes
+  #     - rides
+  #   networks:
+  #     - ebikapp_network
+  #   environment:
+  #     - REGISTRY_URL=http://registry:9000
+  #     - USERS_URL=http://users:9100
+  #     - EBIKES_URL=http://ebikes:9200
+  #     - APIGATEWAY_URL=http://apigateway:10000
+  #     - RIDES_URL=http://rides:9300
+  #     - KAFKA_BROKER_URL=kafka:9092
+  #   command: >
+  #     sh -c "
+  #     sleep 60;
+  #     mvn test"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
     networks:
       - ebikapp_network
+    ports:
+      - "2181:2181"
     environment:
-      - REGISTRY_URL=http://registry:9000
-      - USERS_URL=http://users:9100
-      - EBIKES_URL=http://ebikes:9200
-      - APIGATEWAY_URL=http://apigateway:10000
-      - RIDES_URL=http://rides:9300
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    networks:
+      - ebikapp_network
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     command: >
-      sh -c "
-      sleep 60;
-      mvn test"
+      bash -c "
+        /etc/confluent/docker/run &
+        sleep 50 &&
+        kafka-topics --create --topic ebike-events --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 &&
+        kafka-topics --create --topic ride-events --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 &&
+        kafka-topics --create --topic user-events --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 &&
+        sleep infinity
+      "
 
 networks:
   ebikapp_network:

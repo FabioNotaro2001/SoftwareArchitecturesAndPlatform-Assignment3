@@ -38,4 +38,10 @@ public class User implements Entity<String> {
     public String toString() {
         return "{ id: " + id + ", credit: " + credit + " }";
     }
+
+    public void applyEvent(UserEvent event) {
+        if (this.id.equals(event.userId())) {
+            this.credit += event.creditDelta();
+        }
+    }
 }
