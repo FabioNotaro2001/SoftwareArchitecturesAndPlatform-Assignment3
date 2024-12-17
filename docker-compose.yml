@@ -1,0 +1,152 @@
+name: ebikeapp
+
+services:
+  registry:
+    build:
+      context: ./registry
+      dockerfile: docker-maven/Dockerfile
+    image: registry
+    container_name: registry-01
+    networks:
+      - ebikapp_network
+    ports:
+      - "9000:9000"
+    expose: 
+      - 9000
+    healthcheck:
+      test: curl --fail http://registry:9000/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    environment:
+      - REGISTRY_URL=http://registry:9000
+
+  users:
+    build:
+      context: ./users-manager
+      dockerfile: docker-maven/Dockerfile
+    image: users
+    container_name: my-users
+    depends_on:
+      - registry
+    networks:
+      - ebikapp_network
+    ports:
+      - "9100:9100"
+    expose: 
+      - 9100
+    healthcheck:
+      test: curl --fail http://users:9100/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    environment:
+      - REGISTRY_URL=http://registry:9000
+      - USERS_URL=http://users:9100
+
+  ebikes:
+    build:
+      context: ./ebikes-manager
+      dockerfile: docker-maven/Dockerfile
+    image: ebikes
+    container_name: my-ebikes
+    depends_on:
+      - registry
+    networks:
+      - ebikapp_network
+    ports:
+      - "9200:9200"
+    expose: 
+      - 9200
+    healthcheck:
+      test: curl --fail http://ebikes:9200/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    environment:
+      - REGISTRY_URL=http://registry:9000
+      - EBIKES_URL=http://ebikes:9200
+
+  apigateway:
+    build:
+      context: ./apigateway
+      dockerfile: docker-maven/Dockerfile
+    image: apigateway
+    container_name: my-apigateway
+    networks:
+      - ebikapp_network
+    ports:
+      - "10000:10000"
+    expose: 
+      - 10000
+    healthcheck:
+      test: curl --fail http://apigateway:10000/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    environment:
+      - REGISTRY_URL=http://registry:9000
+      - USERS_URL=http://users:9100
+      - EBIKES_URL=http://ebikes:9200
+      - APIGATEWAY_URL=http://apigateway:10000
+      - RIDES_URL=http://rides:9300
+
+  rides:
+    build:
+      context: ./rides-manager
+      dockerfile: docker-maven/Dockerfile
+    image: rides
+    container_name: my-rides
+    depends_on:
+      - apigateway
+      - registry
+      - users
+      - ebikes
+    networks:
+      - ebikapp_network
+    ports:
+      - "9300:9300"
+    expose: 
+      - 9300
+    healthcheck:
+      test: curl --fail http://rides:9300/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    environment:
+      - REGISTRY_URL=http://registry:9000
+      - USERS_URL=http://users:9100
+      - EBIKES_URL=http://ebikes:9200
+      - RIDES_URL=http://rides:9300
+    command: >
+      sh -c "
+      sleep 40;
+      mvn exec:java -Dexec.mainClass=sap.ass2.rides.RidesManagerLauncher"
+
+  testrunner:
+    build:
+      context: ./end2end-test
+      dockerfile: docker-maven/Dockerfile
+    image: testrunner
+    container_name: my-test-runner
+    depends_on:
+      - apigateway
+      - registry
+      - users
+      - ebikes
+      - rides
+    networks:
+      - ebikapp_network
+    environment:
+      - REGISTRY_URL=http://registry:9000
+      - USERS_URL=http://users:9100
+      - EBIKES_URL=http://ebikes:9200
+      - APIGATEWAY_URL=http://apigateway:10000
+      - RIDES_URL=http://rides:9300
+    command: >
+      sh -c "
+      sleep 60;
+      mvn test"
+
+networks:
+  ebikapp_network:

@@ -1,0 +1,24 @@
+server:
+  port: 10000
+
+spring:
+  application:
+    name: API-GATEWAY 
+
+  cloud:
+    circuitbreaker: # Circuit breaker pattern.
+      resilience4j:
+        enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+
+management: # Application metrics pattern.
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+  endpoint:
+    prometheus:
+      enabled: true
