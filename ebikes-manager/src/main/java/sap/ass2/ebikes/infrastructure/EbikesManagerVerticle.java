@@ -12,11 +12,12 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import sap.ass2.ebikes.application.EbikeEventsConsumer;
 import sap.ass2.ebikes.application.EbikesManagerAPI;
 import sap.ass2.ebikes.domain.Ebike.EbikeState;
 import sap.ass2.ebikes.domain.EbikeEventObserver;
 
-public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEventObserver{
+public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEventObserver, EbikeEventsConsumer {
     private int port;
     private EbikesManagerAPI ebikesAPI;
     private static final String EBIKES_MANAGER_EVENTS = "ebikes-manager-events";    // Topic in which the verticle publishes events.
@@ -225,6 +226,15 @@ public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEven
                 }
             });
         });
+    }
+
+    // FIXME: condensare questi due metodi in uno solo che ascolta gli eventi, distingue tra i due casi e invia il messaggio appropriato
+    // Dall'altro lato bisognerà fare la somma dei campi per ottenere l'oggetto aggiornato
+
+    @Override
+    public void consumeEvents(String message) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'consumeEvents'");
     }
 
     @Override

@@ -66,7 +66,15 @@ public class UsersRepositoryImpl implements UsersRepository, UserEventsConsumer 
 		SpecialFileParser parser = new SpecialFileParser(this.dbFile);
 		try {
 			parser.addEvent(event);
-			this.users.get().get(event.userId()).applyEvent(event);
+
+			if (this.users.isEmpty()) {
+				return;
+			}
+			var user = Optional.ofNullable(users.get().get(event.userId()));
+			if (user.isEmpty()) {
+				return;
+			}
+			user.get().applyEvent(event);
 		} catch (IOException e) {
 			throw new RepositoryException();
 		}
@@ -80,7 +88,7 @@ public class UsersRepositoryImpl implements UsersRepository, UserEventsConsumer 
 				.map(ev -> ev.userId())
 				.distinct()
 				.collect(Collectors.toMap(
-					id -> id,
+					Function.identity(),
 					id -> new UserBuilder()
 				));
 			userEvents.stream()

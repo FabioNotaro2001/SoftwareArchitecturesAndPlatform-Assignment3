@@ -36,7 +36,7 @@ public class EbikeManagerIntegrationTest {
         when(mockRepository.getEbikes()).thenReturn(new ArrayList<>(List.of(ebike1, ebike2)));
 
         // Initialize the manager with the mocked repository.
-        manager = new EbikesManagerImpl(mockRepository);
+        manager = new EbikesManagerImpl(mockRepository, null); // FIXME
     }
 
     @Test
@@ -80,7 +80,7 @@ public class EbikeManagerIntegrationTest {
         assertEquals(20, newEbike.getDouble("y"), "The Y location of the new ebike should match.");
 
         // Verify that the repository's saveEbike method was called with the new ebike.
-        verify(mockRepository, times(1)).saveEbike(any(Ebike.class));
+        verify(mockRepository, times(1)).saveEbikeEvent(any(EbikeEvent.class));
     }
 
     @Test
@@ -89,8 +89,8 @@ public class EbikeManagerIntegrationTest {
         manager.removeEbike("ebike1");
 
         // Verify that the repository's saveEbike method was called with the updated state (DISMISSED).
-        verify(mockRepository, times(1)).saveEbike(argThat(ebike -> 
-            ebike.getId().equals("ebike1") && ebike.getState() == Ebike.EbikeState.DISMISSED));
+        verify(mockRepository, times(1)).saveEbikeEvent(argThat(ebike -> 
+            ebike.ebikeId().equals("ebike1") && ebike.newState().get() == Ebike.EbikeState.DISMISSED)); //FIXME:
 
         // Verify that the ebike was removed from the manager's internal list.
         assertFalse(manager.getAllEbikes().toString().contains("ebike1"), "Ebike1 should no longer exist in the list.");
@@ -103,11 +103,11 @@ public class EbikeManagerIntegrationTest {
                             Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 
         // Verify that the repository's saveEbike method was called.
-        verify(mockRepository, times(1)).saveEbike(argThat(ebike ->
-            ebike.getId().equals("ebike1") &&
-            ebike.getState() == Ebike.EbikeState.IN_USE &&
-            ebike.getLocation().x() == 5.0 &&
-            ebike.getLocation().y() == 5.0));
+        verify(mockRepository, times(1)).saveEbikeEvent(argThat(ebike -> // FIXME
+            ebike.ebikeId().equals("ebike1") &&
+            ebike.newState().get() == Ebike.EbikeState.IN_USE &&
+            ebike.deltaPos().x() == 5.0 &&
+            ebike.deltaPos().y() == 5.0));
 
         // Verify the internal state of the manager reflects the update.
         JsonObject updatedEbike = manager.getEbikeByID("ebike1").orElseThrow();

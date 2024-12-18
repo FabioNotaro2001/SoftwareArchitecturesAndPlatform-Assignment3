@@ -45,6 +45,10 @@ public class V2d implements java.io.Serializable, ValueObject {
         return new V2d(x * fact, y * fact);
     }
 
+    public static V2d zero() {
+        return new V2d(0, 0);
+    }
+
     public String toString() {
         return "V2d(" + x + "," + y + ")";
     }

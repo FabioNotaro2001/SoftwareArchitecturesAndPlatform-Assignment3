@@ -7,7 +7,7 @@ import sap.ddd.Repository;
 
 /** Describes the operations that the ebikes service can do with its repository. */
 public interface EbikesRepository extends Repository {
-    void saveEbike(Ebike eBike) throws RepositoryException;
+    void saveEbikeEvent(EbikeEvent event) throws RepositoryException;
 
     List<Ebike> getEbikes() throws RepositoryException; 
 

@@ -14,7 +14,7 @@ public class EbikesManagerService {
 
     public EbikesManagerService(URL localAddress) throws RepositoryException{
         this.localAddress = localAddress;
-        this.ebikesManager = new EbikesManagerImpl(new EbikesRepositoryImpl());
+        this.ebikesManager = new EbikesManagerImpl(new EbikesRepositoryImpl(), null);
     }
 
     public void launch(){

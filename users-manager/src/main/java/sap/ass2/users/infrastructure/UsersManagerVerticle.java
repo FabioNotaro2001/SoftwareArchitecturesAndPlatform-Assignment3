@@ -12,10 +12,11 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import sap.ass2.users.application.UserEventsConsumer;
 import sap.ass2.users.application.UsersManagerAPI;
 import sap.ass2.users.domain.UserEventObserver;
 
-public class UsersManagerVerticle extends AbstractVerticle implements UserEventObserver {
+public class UsersManagerVerticle extends AbstractVerticle implements UserEventObserver, UserEventsConsumer {
     private int port;
     private UsersManagerAPI usersAPI;
 
@@ -203,6 +204,14 @@ public class UsersManagerVerticle extends AbstractVerticle implements UserEventO
                 }
             });
         });
+    }
+
+    // FIXME: modificare per l'evento
+    // Dall'altro lato bisognerà fare la somma dei campi per ottenere l'oggetto aggiornato
+    @Override
+    public void consumeEvents(String message) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'consumeEvents'");
     }
 
     @Override
