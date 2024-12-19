@@ -186,7 +186,6 @@ services:
         /etc/confluent/docker/run &
         sleep 50 &&
         kafka-topics --create --topic ebike-events --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 &&
-        kafka-topics --create --topic ride-events --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 &&
         kafka-topics --create --topic user-events --bootstrap-server kafka:9092 --replication-factor 1 --partitions 1 &&
         sleep infinity
       "
