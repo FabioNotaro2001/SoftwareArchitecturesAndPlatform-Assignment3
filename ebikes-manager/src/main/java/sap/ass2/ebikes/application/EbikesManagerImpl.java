@@ -63,17 +63,6 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
         return ebikes.stream().map(EbikesManagerImpl::toJSON).collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
     }
 
-    private void notifyObserversAboutUpdate(Ebike ebike) {
-        this.observers.forEach(o -> o.ebikeUpdated(ebike.getId(), ebike.getState(), 
-            ebike.getLocation().x(), ebike.getLocation().y(), 
-            ebike.getDirection().x(), ebike.getDirection().y(), ebike.getSpeed(), 
-            ebike.getBatteryLevel()));
-    }
-    
-    private void notifyObserversAboutRemoval(String ebikeID) {
-        this.observers.forEach(o -> o.ebikeRemoved(ebikeID));
-    }
-
     @Override
     public JsonArray getAllAvailableEbikesIDs() {
         return ebikes.stream().filter(Ebike::isAvailable).map(Ebike::getId).collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
@@ -86,11 +75,9 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
         }
 
         var ebike = new Ebike(ebikeID, new P2d(locationX, locationY));
-        // this.ebikeRepository.saveEbikeEvent(ebike);
         this.kafkaTemplate.send(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), Optional.of(ebike.getState()), 
             ebike.getLocation().toV2d(), ebike.getDirection(), ebike.getSpeed(), ebike.getBatteryLevel()).encode());
         this.ebikes.add(ebike);
-        this.notifyObserversAboutUpdate(ebike); // FIXME: tutti gli observer devono ascoltare per gli eventi (e fare la somma di tutte quelle cose)
         return toJSON(ebike);
     }
 
@@ -107,10 +94,7 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
         }
 
         ebike.updateState(EbikeState.DISMISSED);
-        // this.ebikeRepository.saveEbikeEvent(ebike);
         this.kafkaTemplate.send(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), Optional.of(ebike.getState()), V2d.zero(), V2d.zero(), 0, 0).encode());
-
-        this.notifyObserversAboutRemoval(ebike.getId()); // FIXME: tutti gli observer devono ascoltare per gli eventi (e fare la somma di tutte quelle cose)
 
         this.ebikes.remove(ebike);
     }
@@ -175,8 +159,6 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
 
         // this.ebikeRepository.saveEbikeEvent(ebike);
         this.kafkaTemplate.send(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), newState, deltaPos, deltaDir, deltaSpeed, deltaBatteryLevel).encode());
-
-        this.notifyObserversAboutUpdate(ebike);
     }
 
     @Override

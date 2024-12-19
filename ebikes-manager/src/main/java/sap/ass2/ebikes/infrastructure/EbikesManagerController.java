@@ -16,6 +16,5 @@ public class EbikesManagerController {
         this.service = new EbikesManagerVerticle(this.port, ebikesAPI);
         Vertx v = Vertx.vertx();
         v.deployVerticle(this.service);
-        ebikesAPI.subscribeToEbikeEvents(this.service); // Subscribes the verticle to the events of the manager.
     }
 }

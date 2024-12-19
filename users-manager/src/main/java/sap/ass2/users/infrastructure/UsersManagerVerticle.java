@@ -14,9 +14,8 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import sap.ass2.users.application.UserEventsConsumer;
 import sap.ass2.users.application.UsersManagerAPI;
-import sap.ass2.users.domain.UserEventObserver;
 
-public class UsersManagerVerticle extends AbstractVerticle implements UserEventObserver, UserEventsConsumer {
+public class UsersManagerVerticle extends AbstractVerticle implements UserEventsConsumer {
     private int port;
     private UsersManagerAPI usersAPI;
 
@@ -206,22 +205,11 @@ public class UsersManagerVerticle extends AbstractVerticle implements UserEventO
         });
     }
 
-    // FIXME: modificare per l'evento
     // Dall'altro lato bisognerà fare la somma dei campi per ottenere l'oggetto aggiornato
     @Override
     public void consumeEvents(String message) {
         var eventBus = vertx.eventBus();
         var messageJson = new JsonObject(message).put("event", "user-update");
         eventBus.publish(USER_MANAGER_EVENTS, messageJson);
-    }
-
-    @Override
-    public void userUpdated(String userID, int credit) {
-        var eventBus = vertx.eventBus();
-        var obj = new JsonObject()
-            .put("event", "user-update")
-            .put("userId", userID)
-            .put("credit", credit);
-        eventBus.publish(USER_MANAGER_EVENTS, obj);
     }
 }

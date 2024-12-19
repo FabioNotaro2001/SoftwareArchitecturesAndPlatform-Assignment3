@@ -33,7 +33,7 @@ public class UsersRepositoryImpl implements UsersRepository, UserEventsConsumer 
     }
 
 	// Save the given JSON object in the db folder.
-    // private void saveObj(String id, JsonObject obj) throws RepositoryException { // TODO: cambiare
+    // private void saveObj(String id, JsonObject obj) throws RepositoryException { 
 	// 	try {
 	// 		FileWriter fw = new FileWriter(Path.of(dbaseFolder, id + ".json").toString());
 	// 		java.io.BufferedWriter wr = new BufferedWriter(fw);	

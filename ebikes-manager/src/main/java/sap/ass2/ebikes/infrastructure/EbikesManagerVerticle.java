@@ -17,7 +17,7 @@ import sap.ass2.ebikes.application.EbikesManagerAPI;
 import sap.ass2.ebikes.domain.Ebike.EbikeState;
 import sap.ass2.ebikes.domain.EbikeEventObserver;
 
-public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEventObserver, EbikeEventsConsumer {
+public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEventsConsumer {
     private int port;
     private EbikesManagerAPI ebikesAPI;
     private static final String EBIKES_MANAGER_EVENTS = "ebikes-manager-events";    // Topic in which the verticle publishes events.
@@ -239,34 +239,5 @@ public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEven
             jsonObj.put("event", UPDATE_EVENT);
         }
         eventBus.publish(EBIKES_MANAGER_EVENTS, jsonObj);
-    }
-
-    // FIXME: Le notify e i metodi di ricezione delle notifiche vanno tolte sia nelle bici che negli utenti 
-
-    @Override
-    public void ebikeUpdated(String ebikeID, EbikeState state, 
-                            double locationX, double locationY, double directionX, double directionY, double speed, 
-                            int batteryLevel) {
-            var eventBus = vertx.eventBus();
-            var obj = new JsonObject()
-                .put("event", UPDATE_EVENT)
-                .put("ebikeId", ebikeID)
-                .put("state", state.toString())
-                .put("x", locationX)
-                .put("y", locationY)
-                .put("dirX", directionX)
-                .put("dirY", directionY)
-                .put("speed", speed)
-                .put("batteryLevel", batteryLevel);
-            eventBus.publish(EBIKES_MANAGER_EVENTS, obj);
-    }
-
-    @Override
-    public void ebikeRemoved(String ebikeID) {
-        var eventBus = vertx.eventBus();
-        var obj = new JsonObject()
-            .put("event", REMOVE_EVENT)
-            .put("ebikeId", ebikeID);
-        eventBus.publish(EBIKES_MANAGER_EVENTS, obj);
     }
 }

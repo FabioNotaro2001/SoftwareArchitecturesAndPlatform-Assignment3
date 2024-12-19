@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-
 import org.springframework.kafka.core.KafkaTemplate;
-
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import sap.ass2.users.domain.RepositoryException;
@@ -46,17 +44,12 @@ public class UsersManagerImpl implements UsersManagerAPI {
         return users.stream().map(UsersManagerImpl::toJSON).collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
     }
 
-    private void notifyObservers(User user) {
-        this.observers.forEach(o -> o.userUpdated(user.getId(), user.getCredit()));
-    }
-
     @Override
     public JsonObject createUser(String userID) throws RepositoryException {
         var user = new User(userID, 0);
         // this.userRepository.saveUserEvent(user);
         kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(user.getId(), user.getCredit()).encode());
         this.users.add(user);
-        this.notifyObservers(user); // FIXME: tutti gli observer devono ascoltare per gli eventi (e fare la somma di tutte quelle cose)
         return UsersManagerImpl.toJSON(user);
     }
 
@@ -77,8 +70,6 @@ public class UsersManagerImpl implements UsersManagerAPI {
         user.rechargeCredit(credit); 
         // this.userRepository.saveUserEvent(user);
         kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(userID, credit).encode());
-
-        this.notifyObservers(user); 
     }
 
     @Override
@@ -92,8 +83,6 @@ public class UsersManagerImpl implements UsersManagerAPI {
         user.decreaseCredit(amount); 
         // this.userRepository.saveUserEvent(user);
         kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(userID, -amount).encode());
-
-        this.notifyObservers(user); 
     }
 
     @Override

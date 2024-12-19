@@ -16,6 +16,5 @@ public class UsersManagerController {
         this.service = new UsersManagerVerticle(this.port, usersAPI);
         Vertx v = Vertx.vertx();
         v.deployVerticle(this.service);
-        usersAPI.subscribeToUserEvents(this.service);   // Subscribes the verticle to the events of the manager.
     }
 }
