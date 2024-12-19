@@ -83,10 +83,10 @@ public class UsersProxy implements UsersAPI {
                     } else if (evType.equals("user-update")) {
                         // User parameters to change.
 						String userID = obj.getString("userId");
-                        int credit = obj.getInteger("credit");
+                        int creditChange = obj.getInteger("credits");
                         
 						// Notify event to the admin GUI.
-						observer.userUpdated(userID, credit);
+						observer.userUpdated(userID, creditChange);
                     }
                 });
             } else {

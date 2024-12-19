@@ -12,6 +12,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.swing.*;
 import io.vertx.core.json.JsonObject;
@@ -242,20 +243,23 @@ public class AdminGUI extends JFrame implements ActionListener, UserEventObserve
     }
 
 	@Override
-	public void bikeUpdated(String bikeID, EbikeState state, double locationX, double locationY, double directionX, double directionY, double speed, int batteryLevel) {
-		Ebike eBikeInfo;
+	public void bikeUpdated(String bikeID, Optional<EbikeState> state, double locationX, double locationY, double directionX, double directionY, double speed, int batteryLevel) {
+		var eBikeInfo = Optional.ofNullable(bikes.get(bikeID));
 
-		if (state == EbikeState.DISMISSED) {
-			SwingUtilities.invokeLater(() -> removeEBike(bikeID)); 
-		} else {	
-			eBikeInfo = new Ebike(bikeID, state, locationX, locationY, directionX, directionY, speed, batteryLevel);
-			SwingUtilities.invokeLater(() -> {
-				addOrReplaceEBike(eBikeInfo); 
-				centralPanel.refresh(); 
-			});
+		if (eBikeInfo.isEmpty()) {
+			eBikeInfo = Optional.of(new Ebike(bikeID, state.get(), locationX, locationY, directionX, directionY, speed, batteryLevel));
+		} else {
+			eBikeInfo = Optional.of(eBikeInfo.get().addEvent(state, locationX, locationY, directionX, directionY, speed, batteryLevel));
 		}
 
-		if (state != EbikeState.IN_USE) {
+		final var eBikeInfo2 = eBikeInfo;
+
+		SwingUtilities.invokeLater(() -> {
+			addOrReplaceEBike(eBikeInfo2.get()); 
+			centralPanel.refresh(); 
+		});
+		
+		if (eBikeInfo.get().state() != EbikeState.IN_USE) {
 			var ride = rides.values().stream().filter(r -> r.ebikeId().equals(bikeID)).findFirst();
 			if (ride.isPresent()) {
 				SwingUtilities.invokeLater(() -> {
@@ -294,7 +298,12 @@ public class AdminGUI extends JFrame implements ActionListener, UserEventObserve
 	}
 
 	@Override
-	public void userUpdated(String userID, int credit) {
-		SwingUtilities.invokeLater(() -> this.addOrReplaceUser(new User(userID, credit)));
+	public void userUpdated(String userID, int creditChange) {
+		var user = Optional.ofNullable(users.get(userID));
+		if (user.isEmpty()) {
+			SwingUtilities.invokeLater(() -> this.addOrReplaceUser(new User(userID, creditChange)));
+		} else {
+			SwingUtilities.invokeLater(() -> this.addOrReplaceUser(user.get().updateCredit(creditChange)));
+		}
 	}
 }

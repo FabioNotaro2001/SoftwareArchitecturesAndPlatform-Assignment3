@@ -158,7 +158,7 @@ public class UsersProxy implements UsersAPI {
 						JsonObject user = obj.getJsonObject("user");
                         p.complete(user);
                     } else if (evType.equals("user-update")) {
-                        int credit = obj.getInteger("credit");
+                        int credit = obj.getInteger("credits");
                         
 						// Notify event to the admin GUI.
 						observer.userUpdated(userID, credit);

@@ -1,6 +1,8 @@
 package sap.ass2.usergui.library;
 
 import java.net.URL;
+import java.util.Optional;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -84,16 +86,16 @@ public class EbikesProxy implements EbikesAPI {
                         p.complete(ebike);
                     } else if (evType.equals("ebike-update")) {
                         // Bike parameters to change.
-						String state = obj.getString("state");
-                        double locX = obj.getDouble("x");
-                        double locY = obj.getDouble("y");
-                        double dirX = obj.getDouble("dirX");
-                        double dirY = obj.getDouble("dirY");
-                        double speed = obj.getDouble("speed");
-                        int batteryLevel = obj.getInteger("batteryLevel");
+						Optional<String> newState = Optional.ofNullable(obj.getString("newState"));
+                        double deltaLocX = obj.getDouble("deltaPosX");
+                        double deltaLocY = obj.getDouble("deltaPosY");
+                        double deltaDirX = obj.getDouble("deltaDirX");
+                        double deltaDirY = obj.getDouble("deltaDirY");
+                        double delstaSpeed = obj.getDouble("deltaSpeed");
+                        int deltaBatteryLevel = obj.getInteger("deltaBatteryLevel");
                         
 						// Notify event to the user GUI.
-                        observer.bikeUpdated(ebikeID, EbikeState.valueOf(state), locX, locY, dirX, dirY, speed, batteryLevel);
+                        observer.bikeUpdated(ebikeID, newState.map(EbikeState::valueOf), deltaLocX, deltaLocY, deltaDirX, deltaDirY, delstaSpeed, deltaBatteryLevel);
                     }
                 });
             } else {

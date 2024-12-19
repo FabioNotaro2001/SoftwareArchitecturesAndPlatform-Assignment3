@@ -176,9 +176,9 @@ public class UserGUI extends JFrame implements ActionListener, UserEventObserver
     }
 
     @Override
-    public void userUpdated(String userID, int credit) {
-        this.selectedUser = this.selectedUser.updateCredit(credit);
-        this.userCreditLabel.setText("Credits: " + credit);
+    public void userUpdated(String userID, int creditChange) {
+        this.selectedUser = this.selectedUser.updateCredit(creditChange);
+        this.userCreditLabel.setText("Credits: " + selectedUser.credit());
         this.pack();
     }
 

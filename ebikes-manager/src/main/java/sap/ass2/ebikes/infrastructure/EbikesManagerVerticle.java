@@ -228,14 +228,20 @@ public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEven
         });
     }
 
-    // FIXME: condensare questi due metodi in uno solo che ascolta gli eventi, distingue tra i due casi e invia il messaggio appropriato
-    // Dall'altro lato bisognerà fare la somma dei campi per ottenere l'oggetto aggiornato
-
     @Override
     public void consumeEvents(String message) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'consumeEvents'");
+        var eventBus = vertx.eventBus();
+        var jsonObj = new JsonObject(message);
+        var newState = Optional.ofNullable(jsonObj.getString("newState"));
+        if (newState.isPresent() && EbikeState.valueOf(newState.get()) == EbikeState.DISMISSED) {
+            jsonObj.put("event", REMOVE_EVENT);
+        } else {
+            jsonObj.put("event", UPDATE_EVENT);
+        }
+        eventBus.publish(EBIKES_MANAGER_EVENTS, jsonObj);
     }
+
+    // FIXME: Le notify e i metodi di ricezione delle notifiche vanno tolte sia nelle bici che negli utenti 
 
     @Override
     public void ebikeUpdated(String ebikeID, EbikeState state, 

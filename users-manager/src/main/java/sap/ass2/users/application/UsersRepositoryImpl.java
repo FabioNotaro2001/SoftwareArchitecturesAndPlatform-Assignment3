@@ -160,7 +160,7 @@ public class UsersRepositoryImpl implements UsersRepository, UserEventsConsumer 
 
 	@Override
 	public void consumeEvents(String message) {
-		JsonObject obj = new JsonObject();
+		JsonObject obj = new JsonObject(message);
 		try {
 			saveUserEvent(UserEvent.from(obj.getString("userId"), obj.getInteger("credits")));
 		} catch (RepositoryException e) {

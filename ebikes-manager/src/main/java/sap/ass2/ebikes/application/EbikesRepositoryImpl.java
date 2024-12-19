@@ -180,7 +180,7 @@ public class EbikesRepositoryImpl implements EbikesRepository, EbikeEventsConsum
 
 	@Override
 	public void consumeEvents(String message) {
-		JsonObject obj = new JsonObject();
+		JsonObject obj = new JsonObject(message);
 		try {
 			saveEbikeEvent(EbikeEvent.from(obj.getString("ebikeId"), Optional.ofNullable(obj.getString("newState")).map(EbikeState::valueOf),
 				new V2d(obj.getDouble("deltaPosX"),obj.getDouble("deltaPosY")), new V2d(obj.getDouble("deltaDirX"),obj.getDouble("deltaDirY")),

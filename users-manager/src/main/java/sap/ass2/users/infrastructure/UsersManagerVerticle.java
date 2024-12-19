@@ -210,8 +210,9 @@ public class UsersManagerVerticle extends AbstractVerticle implements UserEventO
     // Dall'altro lato bisognerà fare la somma dei campi per ottenere l'oggetto aggiornato
     @Override
     public void consumeEvents(String message) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'consumeEvents'");
+        var eventBus = vertx.eventBus();
+        var messageJson = new JsonObject(message).put("event", "user-update");
+        eventBus.publish(USER_MANAGER_EVENTS, messageJson);
     }
 
     @Override
