@@ -8,11 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import io.vertx.core.json.JsonObject;
-
 import java.util.function.Function;
-
 import sap.ass2.ebikes.domain.Ebike;
 import sap.ass2.ebikes.domain.Ebike.EbikeState;
 import sap.ass2.ebikes.domain.EbikeBuilder;
@@ -25,15 +22,16 @@ public class EbikesRepositoryImpl implements EbikesRepository, EbikeEventsConsum
 	private Path dbFile;
 	Optional<Map<String, Ebike>> ebikes;
 
-	public EbikesRepositoryImpl() throws RepositoryException {
+	public EbikesRepositoryImpl(CustomKafkaListener listener) throws RepositoryException {
 		this.dbFile = Path.of("./database/db.txt");
 		try {
 			new File(this.dbFile.toString()).createNewFile();
 		} catch (IOException e) {
 			throw new RepositoryException();
 		}
-
+		
 		this.ebikes = Optional.empty();
+		listener.onEach(this::consumeEvents);
 	}
 
 	// Save the given JSON object in the db folder.
@@ -143,7 +141,7 @@ public class EbikesRepositoryImpl implements EbikesRepository, EbikeEventsConsum
 			loadEbikes();
 		}
 
-		return this.ebikes.get().values().stream().filter(eb -> eb.getState() != EbikeState.DISMISSED).toList();
+		return this.ebikes.get().values().stream().filter(eb -> eb.getState() != EbikeState.DISMISSED).collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
 	}
 
 	@Override
@@ -182,9 +180,10 @@ public class EbikesRepositoryImpl implements EbikesRepository, EbikeEventsConsum
 	public void consumeEvents(String message) {
 		JsonObject obj = new JsonObject(message);
 		try {
+			System.out.println("Received message: " + message);
 			saveEbikeEvent(EbikeEvent.from(obj.getString("ebikeId"), Optional.ofNullable(obj.getString("newState")).map(EbikeState::valueOf),
 				new V2d(obj.getDouble("deltaPosX"),obj.getDouble("deltaPosY")), new V2d(obj.getDouble("deltaDirX"),obj.getDouble("deltaDirY")),
-				obj.getDouble("deltaSpeed"), obj.getDouble("deltaBatteryLevel")));
+				obj.getDouble("deltaSpeed"), obj.getInteger("deltaBatteryLevel")));
 		} catch (RepositoryException e) {
 			e.printStackTrace();
 			throw new RuntimeException(e);

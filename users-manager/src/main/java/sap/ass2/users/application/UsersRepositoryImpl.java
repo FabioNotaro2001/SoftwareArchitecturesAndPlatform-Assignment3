@@ -131,7 +131,7 @@ public class UsersRepositoryImpl implements UsersRepository, UserEventsConsumer 
 			loadUsers();
 		}
 
-		return this.users.get().values().stream().toList();
+		return this.users.get().values().stream().collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
     }
 
     @Override

@@ -48,9 +48,15 @@ public class UsersManagerImpl implements UsersManagerAPI {
     public JsonObject createUser(String userID) throws RepositoryException {
         var user = new User(userID, 0);
         // this.userRepository.saveUserEvent(user);
-        kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(user.getId(), user.getCredit()).encode());
+        try{
+            kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(user.getId(), user.getCredit()).encode());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
         this.users.add(user);
-        return UsersManagerImpl.toJSON(user);
+        var result = UsersManagerImpl.toJSON(user);
+        System.out.println(result);
+        return result;
     }
 
     @Override

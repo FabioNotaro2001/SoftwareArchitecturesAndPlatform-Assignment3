@@ -49,6 +49,7 @@ public class UsersManagerVerticle extends AbstractVerticle implements UserEvents
     }
 
     private static void sendServiceError(HttpServerResponse response, Exception ex) {
+        logger.log(Level.SEVERE, "Exception", ex);
         response.setStatusCode(500);
         response.putHeader("content-type", "application/json");
 

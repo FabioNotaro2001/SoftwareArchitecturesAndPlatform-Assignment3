@@ -43,8 +43,13 @@ public class UsersProxy implements UsersAPI {
 		.onSuccess(req -> {
 			req.response().onSuccess(response -> {
 				response.body().onSuccess(buf -> {
-					JsonObject obj = buf.toJsonObject();
-					p.complete(obj.getJsonArray("users"));	// Completes the promise for the user GUI.
+					try{
+						JsonObject obj = buf.toJsonObject();
+						p.complete(obj.getJsonArray("users"));	// Completes the promise for the user GUI.
+					} catch (Exception e) {
+						System.out.println("Errore: " + buf.toString());
+						p.fail(e);
+					}
 				});
 			});
 			req.send();
@@ -64,6 +69,7 @@ public class UsersProxy implements UsersAPI {
 			req.response().onSuccess(response -> {
 				response.body().onSuccess(buf -> {
 					JsonObject obj = buf.toJsonObject();
+					System.out.println(obj);
 					p.complete(obj.getJsonObject("user"));	// Completes the promise for the user GUI.
 				});
 			});

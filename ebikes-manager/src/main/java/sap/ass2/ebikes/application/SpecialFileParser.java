@@ -31,7 +31,7 @@ public class SpecialFileParser {
                 V2d deltaPos = new V2d(Double.parseDouble(parts[2]), Double.parseDouble(parts[3]));
                 V2d deltaDir = new V2d(Double.parseDouble(parts[4]), Double.parseDouble(parts[5]));
                 double deltaSpeed = Double.parseDouble(parts[6]);
-                double deltaBatteryLevel = Double.parseDouble(parts[7]);
+                int deltaBatteryLevel = Integer.parseInt(parts[7]);
 
                 events.add(new EbikeEvent(ebikeId, newState, deltaPos, deltaDir, deltaSpeed, deltaBatteryLevel));
             });
@@ -41,7 +41,7 @@ public class SpecialFileParser {
 
     public synchronized void addEvent(EbikeEvent event) throws IOException {
         try (var writer = new BufferedWriter(new FileWriter(this.path.toString()))) {
-            writer.append(String.format("{0} {1} {2} {3} {4} {5} {6} {7} ", event.ebikeId(), event.newState().map(EbikeState::toString).orElse("-"), 
+            writer.append(String.format("%s %s %f %f %f %f %f %d", event.ebikeId(), event.newState().map(EbikeState::toString).orElse("-"), 
                 event.deltaPos().x(), event.deltaPos().y(), event.deltaDir().x(), event.deltaDir().y(), event.deltaSpeed(), event.deltaBatteryLevel()));
             writer.newLine();
         }

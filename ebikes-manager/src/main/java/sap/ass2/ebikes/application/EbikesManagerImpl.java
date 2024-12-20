@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import io.vertx.core.json.JsonArray;
@@ -25,9 +27,9 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
     // private final EbikesRepository ebikeRepository;
     private final List<Ebike> ebikes;
     private List<EbikeEventObserver> observers; // observer = EbikesManagerVerticle.
-    private KafkaTemplate<String, String> kafkaTemplate;
+    private KafkaProducer<String, String> kafkaTemplate;
 
-    public EbikesManagerImpl(EbikesRepository ebikeRepository, KafkaTemplate<String, String> kafkaTemplate) throws RepositoryException {
+    public EbikesManagerImpl(EbikesRepository ebikeRepository, KafkaProducer<String, String> kafkaTemplate) throws RepositoryException {
         this.ebikes = Collections.synchronizedList(ebikeRepository.getEbikes());
         this.observers = Collections.synchronizedList(new ArrayList<>());
         this.kafkaTemplate = kafkaTemplate;
@@ -75,8 +77,8 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
         }
 
         var ebike = new Ebike(ebikeID, new P2d(locationX, locationY));
-        this.kafkaTemplate.send(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), Optional.of(ebike.getState()), 
-            ebike.getLocation().toV2d(), ebike.getDirection(), ebike.getSpeed(), ebike.getBatteryLevel()).encode());
+        this.kafkaTemplate.send(new ProducerRecord<String,String>(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), Optional.of(ebike.getState()), 
+        ebike.getLocation().toV2d(), ebike.getDirection(), ebike.getSpeed(), ebike.getBatteryLevel()).encode()));
         this.ebikes.add(ebike);
         return toJSON(ebike);
     }
@@ -94,7 +96,7 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
         }
 
         ebike.updateState(EbikeState.DISMISSED);
-        this.kafkaTemplate.send(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), Optional.of(ebike.getState()), V2d.zero(), V2d.zero(), 0, 0).encode());
+        this.kafkaTemplate.send(new ProducerRecord<String,String>(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), Optional.of(ebike.getState()), V2d.zero(), V2d.zero(), 0, 0).encode()));
 
         this.ebikes.remove(ebike);
     }
@@ -158,7 +160,7 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
         }
 
         // this.ebikeRepository.saveEbikeEvent(ebike);
-        this.kafkaTemplate.send(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), newState, deltaPos, deltaDir, deltaSpeed, deltaBatteryLevel).encode());
+        this.kafkaTemplate.send(new ProducerRecord<String,String>(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), newState, deltaPos, deltaDir, deltaSpeed, deltaBatteryLevel).encode()));
     }
 
     @Override

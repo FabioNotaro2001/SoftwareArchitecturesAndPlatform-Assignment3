@@ -15,7 +15,7 @@ import io.vertx.ext.web.RoutingContext;
 import sap.ass2.ebikes.application.EbikeEventsConsumer;
 import sap.ass2.ebikes.application.EbikesManagerAPI;
 import sap.ass2.ebikes.domain.Ebike.EbikeState;
-import sap.ass2.ebikes.domain.EbikeEventObserver;
+import sap.ass2.ebikes.application.CustomKafkaListener;
 
 public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEventsConsumer {
     private int port;
@@ -28,9 +28,10 @@ public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEven
 
     static Logger logger = Logger.getLogger("[Ebikes Manager Verticle]");	
 
-    public EbikesManagerVerticle(int port, EbikesManagerAPI ebikesAPI) {
+    public EbikesManagerVerticle(int port, EbikesManagerAPI ebikesAPI, CustomKafkaListener listener) {
         this.port = port;
         this.ebikesAPI = ebikesAPI;
+        listener.onEach(this::consumeEvents);
     }
 
     public void start() {
@@ -230,6 +231,7 @@ public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEven
 
     @Override
     public void consumeEvents(String message) {
+
         var eventBus = vertx.eventBus();
         var jsonObj = new JsonObject(message);
         var newState = Optional.ofNullable(jsonObj.getString("newState"));
