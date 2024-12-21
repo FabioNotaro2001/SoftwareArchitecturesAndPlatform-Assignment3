@@ -2,15 +2,12 @@ package sap.ass2.ebikes;
 
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
-
-import org.apache.kafka.clients.producer.KafkaProducer;
-
 import sap.ass2.ebikes.application.CustomKafkaListener;
 import sap.ass2.ebikes.application.EbikesManagerAPI;
 import sap.ass2.ebikes.application.EbikesManagerImpl;
 import sap.ass2.ebikes.application.EbikesRepositoryImpl;
-import sap.ass2.ebikes.application.KafkaConsumerConfig;
-import sap.ass2.ebikes.application.KafkaProducerConfig;
+import sap.ass2.ebikes.application.KafkaConsumerFactory;
+import sap.ass2.ebikes.application.KafkaProducerFactory;
 import sap.ass2.ebikes.domain.RepositoryException;
 import sap.ass2.ebikes.infrastructure.EbikesManagerController;
 
@@ -22,8 +19,8 @@ public class EbikesManagerService {
 
     public EbikesManagerService(URL localAddress) throws RepositoryException{
         this.localAddress = localAddress;
-        this.listener = new CustomKafkaListener("ebike-events", KafkaConsumerConfig.defaultConsumer());
-        this.ebikesManager = new EbikesManagerImpl(new EbikesRepositoryImpl(listener), KafkaProducerConfig.kafkaProducer());
+        this.listener = new CustomKafkaListener("ebike-events", KafkaConsumerFactory.defaultConsumer());
+        this.ebikesManager = new EbikesManagerImpl(new EbikesRepositoryImpl(listener), KafkaProducerFactory.kafkaProducer());
     }
 
     public void launch(){

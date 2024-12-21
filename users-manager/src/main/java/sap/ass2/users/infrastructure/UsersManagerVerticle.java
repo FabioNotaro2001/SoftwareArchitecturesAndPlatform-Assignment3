@@ -12,20 +12,20 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import sap.ass2.users.application.CustomKafkaListener;
 import sap.ass2.users.application.UserEventsConsumer;
 import sap.ass2.users.application.UsersManagerAPI;
 
 public class UsersManagerVerticle extends AbstractVerticle implements UserEventsConsumer {
     private int port;
     private UsersManagerAPI usersAPI;
-
     private static final String USER_MANAGER_EVENTS = "users-manager-events";   // Topic in which the verticle publishes events.
-
     static Logger logger = Logger.getLogger("[Users Manager Verticle]");
 
-    public UsersManagerVerticle(int port, UsersManagerAPI usersAPI) {
+    public UsersManagerVerticle(int port, UsersManagerAPI usersAPI, CustomKafkaListener listener) {
         this.port = port;
         this.usersAPI = usersAPI;
+        listener.onEach(this::consumeEvents);
     }
 
     public void start() {

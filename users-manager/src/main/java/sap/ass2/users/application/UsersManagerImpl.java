@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import sap.ass2.users.domain.RepositoryException;
@@ -18,12 +19,12 @@ public class UsersManagerImpl implements UsersManagerAPI {
     // private final UsersRepository userRepository;
     private final List<User> users;
     private List<UserEventObserver> observers;  // observer = UsersManagerVerticle.
-    private KafkaTemplate<String, String> kafkaTemplate;
+    private KafkaProducer<String, String> kafkaProducer;
 
-    public UsersManagerImpl(UsersRepository userRepository, KafkaTemplate<String, String> kafkaTemplate) throws RepositoryException {
+    public UsersManagerImpl(UsersRepository userRepository, KafkaProducer<String, String> kafkaProducer) throws RepositoryException {
         this.observers = Collections.synchronizedList(new ArrayList<>());
         this.users = Collections.synchronizedList(userRepository.getUsers());
-        this.kafkaTemplate = kafkaTemplate;
+        this.kafkaProducer = kafkaProducer;
     }
 
     // Converts an user to a JSON.
@@ -49,7 +50,7 @@ public class UsersManagerImpl implements UsersManagerAPI {
         var user = new User(userID, 0);
         // this.userRepository.saveUserEvent(user);
         try{
-            kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(user.getId(), user.getCredit()).encode());
+            kafkaProducer.send(new ProducerRecord<String,String>(USER_EVENTS_TOPIC, userEventToJSON(user.getId(), user.getCredit()).encode()));
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -75,7 +76,7 @@ public class UsersManagerImpl implements UsersManagerAPI {
         var user = userOpt.get(); 
         user.rechargeCredit(credit); 
         // this.userRepository.saveUserEvent(user);
-        kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(userID, credit).encode());
+        kafkaProducer.send(new ProducerRecord<String,String>(USER_EVENTS_TOPIC, userEventToJSON(userID, credit).encode()));
     }
 
     @Override
@@ -88,7 +89,7 @@ public class UsersManagerImpl implements UsersManagerAPI {
         var user = userOpt.get(); 
         user.decreaseCredit(amount); 
         // this.userRepository.saveUserEvent(user);
-        kafkaTemplate.send(USER_EVENTS_TOPIC, userEventToJSON(userID, -amount).encode());
+        kafkaProducer.send(new ProducerRecord<String,String>(USER_EVENTS_TOPIC, userEventToJSON(userID, -amount).encode()));
     }
 
     @Override

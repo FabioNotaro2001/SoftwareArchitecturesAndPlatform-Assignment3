@@ -29,7 +29,7 @@ public class SpecialFileParser {
     }
 
     public synchronized void addEvent(UserEvent event) throws IOException {
-        try (var writer = new BufferedWriter(new FileWriter(this.path.toString()))) {
+        try (var writer = new BufferedWriter(new FileWriter(this.path.toString(), true))) {
             writer.append(String.format("{0} {1}", event.userId(), event.creditDelta()));
             writer.newLine();
         }
