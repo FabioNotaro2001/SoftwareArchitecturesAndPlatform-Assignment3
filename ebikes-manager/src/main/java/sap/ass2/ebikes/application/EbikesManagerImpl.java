@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.springframework.kafka.core.KafkaTemplate;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -28,6 +29,8 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
     private final List<Ebike> ebikes;
     private List<EbikeEventObserver> observers; // observer = EbikesManagerVerticle.
     private KafkaProducer<String, String> kafkaTemplate;
+
+    private Logger logger = Logger.getLogger("[Ebikes Manager]");
 
     public EbikesManagerImpl(EbikesRepository ebikeRepository, KafkaProducer<String, String> kafkaTemplate) throws RepositoryException {
         this.ebikes = Collections.synchronizedList(ebikeRepository.getEbikes());
@@ -123,6 +126,8 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
             ebike.updateState(state.get());
         }
 
+        var currentState = ebike.getState();
+
         var deltaPos = V2d.zero();
         if (locationX.isPresent()) {
             deltaPos = deltaPos.sum(new V2d(locationX.get() - ebike.getLocation().x(), 0));
@@ -154,13 +159,14 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
             deltaBatteryLevel += batteryLevel.get() - ebike.getBatteryLevel();
             ebike.setBatteryLevel(batteryLevel.get());
 
-            if (ebike.getState() != newState.get()) {
+            if (ebike.getState() != currentState) {
                 newState = Optional.of(ebike.getState());
             }
         }
-
+        this.logger.log(Level.INFO, "Before sending update event");
         // this.ebikeRepository.saveEbikeEvent(ebike);
         this.kafkaTemplate.send(new ProducerRecord<String,String>(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), newState, deltaPos, deltaDir, deltaSpeed, deltaBatteryLevel).encode()));
+        this.logger.log(Level.INFO, "After sending update event");
     }
 
     @Override

@@ -56,6 +56,7 @@ public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEven
     }
 
     private static void sendServiceError(HttpServerResponse response, Exception ex) {
+        logger.log(Level.SEVERE, "Exception", ex);
         response.setStatusCode(500);
         response.putHeader("content-type", "application/json");
 
@@ -153,7 +154,7 @@ public class EbikesManagerVerticle extends AbstractVerticle implements EbikeEven
             try{
                 data = buffer.toJsonObject();
             } catch (Exception e){
-
+                sendServiceError(context.response(), e);
                 return;
             }
             String ebikeID = context.pathParam("ebikeId");

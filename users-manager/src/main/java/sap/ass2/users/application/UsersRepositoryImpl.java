@@ -21,7 +21,7 @@ public class UsersRepositoryImpl implements UsersRepository, UserEventsConsumer 
     private Path dbFile;
 	Optional<Map<String, User>> users;
 
-    public UsersRepositoryImpl() throws RepositoryException {
+    public UsersRepositoryImpl(CustomKafkaListener listener) throws RepositoryException {
         this.dbFile = Path.of("./database/db.txt");  
 		try {
 			new File(this.dbFile.toString()).createNewFile();
@@ -30,6 +30,7 @@ public class UsersRepositoryImpl implements UsersRepository, UserEventsConsumer 
 		}
 
 		this.users = Optional.empty();
+		listener.onEach(this::consumeEvents);
     }
 
 	// Save the given JSON object in the db folder.

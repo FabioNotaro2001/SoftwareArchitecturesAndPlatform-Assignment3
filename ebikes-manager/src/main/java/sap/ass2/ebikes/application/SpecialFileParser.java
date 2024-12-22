@@ -11,7 +11,6 @@ import java.util.Scanner;
 
 import sap.ass2.ebikes.domain.Ebike.EbikeState;
 import sap.ass2.ebikes.domain.EbikeEvent;
-import sap.ass2.ebikes.domain.P2d;
 import sap.ass2.ebikes.domain.V2d;
 
 public class SpecialFileParser {
