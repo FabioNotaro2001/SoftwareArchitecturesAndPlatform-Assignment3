@@ -138,6 +138,7 @@ public class RidesExecutionVerticle extends AbstractVerticle {
                     if (stopRequestedOpt.isPresent()) {
                         this.stopRideRequested.remove(rideID);
                         this.rides.remove(rideID);
+                        this.timeVars.remove(rideID);
                         this.observer.rideEnded(rideID, stopRequestedOpt.get().reason);
 
                         Ebike ebike = jsonObjToEbike((cf.<Optional<JsonObject>>list().get(0)).get());
@@ -225,6 +226,8 @@ public class RidesExecutionVerticle extends AbstractVerticle {
                             Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 
                         this.rides.remove(rideID);
+                        this.timeVars.remove(rideID);
+                        this.stopRideRequested.remove(rideID);
                         this.observer.rideEnded(rideID, (ebike.batteryLevel() > 0 ? RideStopReason.USER_RAN_OUT_OF_CREDIT : RideStopReason.EBIKE_RAN_OUT_OF_BATTERY).reason);
                         consumer.unregister();
 

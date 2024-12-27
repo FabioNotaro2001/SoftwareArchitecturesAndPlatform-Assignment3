@@ -1,7 +1,7 @@
 package sap.ass2.ebikes.domain;
 
 public class EbikeBuilder {
-    private String ebikeId;
+    private String ebikeId = "";
     private Ebike.EbikeState state = Ebike.EbikeState.AVAILABLE;
     private P2d loc = P2d.zero();
     private V2d direction = V2d.zero();
