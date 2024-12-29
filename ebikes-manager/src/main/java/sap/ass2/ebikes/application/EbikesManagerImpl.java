@@ -14,7 +14,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import sap.ass2.ebikes.domain.Ebike.EbikeState;
 import sap.ass2.ebikes.domain.Ebike;
-import sap.ass2.ebikes.domain.EbikeEventObserver;
 import sap.ass2.ebikes.domain.EbikesRepository;
 import sap.ass2.ebikes.domain.P2d;
 import sap.ass2.ebikes.domain.RepositoryException;
@@ -27,14 +26,12 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
 
     // private final EbikesRepository ebikeRepository;
     private final List<Ebike> ebikes;
-    private List<EbikeEventObserver> observers; // observer = EbikesManagerVerticle.
     private KafkaProducer<String, String> kafkaTemplate;
 
     private Logger logger = Logger.getLogger("[Ebikes Manager]");
 
     public EbikesManagerImpl(EbikesRepository ebikeRepository, KafkaProducer<String, String> kafkaTemplate) throws RepositoryException {
         this.ebikes = Collections.synchronizedList(ebikeRepository.getEbikes());
-        this.observers = Collections.synchronizedList(new ArrayList<>());
         this.kafkaTemplate = kafkaTemplate;
     }
 
@@ -168,10 +165,4 @@ public class EbikesManagerImpl implements EbikesManagerAPI {
         this.kafkaTemplate.send(new ProducerRecord<String,String>(EBIKE_EVENTS_TOPIC, ebikeEventToJSON(ebike.getId(), newState, deltaPos, deltaDir, deltaSpeed, deltaBatteryLevel).encode()));
         this.logger.log(Level.INFO, "After sending update event");
     }
-
-    @Override
-    public void subscribeToEbikeEvents(EbikeEventObserver observer) {
-        this.observers.add(observer);
-    }
-
 }
