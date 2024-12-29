@@ -1,6 +1,5 @@
 package sap.ass2.users.application;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
