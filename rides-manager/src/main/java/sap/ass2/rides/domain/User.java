@@ -11,4 +11,15 @@ public record User(String id, int credit) implements Entity<String> {
     public String getId() {
         return id;
     }
+
+    public User applyEvent(UserEvent event) {
+        if (this.id.equals(event.userId())) {
+            return new User(id, credit+event.creditDelta());
+        }
+        return this;
+    }
+
+    public static User from(UserEvent event){
+        return new User(event.userId(), event.creditDelta());
+    }
 }

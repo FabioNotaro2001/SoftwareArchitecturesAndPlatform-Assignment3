@@ -6,6 +6,9 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.apache.kafka.clients.producer.KafkaProducer;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -35,9 +38,11 @@ public class RidesExecutionVerticle extends AbstractVerticle {
 
     private MessageConsumer<Object> loopConsumer;   // Consumer thats periodically sends events to the rides to make them proceed.
 
-    static Logger logger = Logger.getLogger("[Rides Executor Verticle]");	
+    static Logger logger = Logger.getLogger("[Rides Executor Verticle]");
 
-    public RidesExecutionVerticle(RideEventObserver observer, UsersManagerRemoteAPI usersManager, EbikesManagerRemoteAPI ebikesManager) {
+    private KafkaProducer<String, String> producer;
+
+    public RidesExecutionVerticle(RideEventObserver observer, UsersManagerRemoteAPI usersManager, EbikesManagerRemoteAPI ebikesManager, KafkaProducer<String, String> producer) {
         this.observer = observer;
         this.usersManager = usersManager;
         this.ebikesManager = ebikesManager;
@@ -47,6 +52,8 @@ public class RidesExecutionVerticle extends AbstractVerticle {
         this.stopRideRequested = new ConcurrentHashMap<>();
 
         this.loopConsumer = null;
+        this.producer = producer;
+        // TODO SIAMO ARRIVATI QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII.
     }
 
     public void launch() {
