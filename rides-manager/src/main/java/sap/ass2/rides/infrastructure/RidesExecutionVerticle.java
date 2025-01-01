@@ -112,14 +112,17 @@ public class RidesExecutionVerticle extends AbstractVerticle {
 
     private void sendRideEvent(RideStartedEvent event){
         this.producer.send(new ProducerRecord<String,String>("ride-events", RideEventParser.toJSON(event).encode()));
+        logger.log(Level.INFO, "Inviato evento ride start");
     }
 
     private void sendRideEvent(RideStepEvent event){
         this.producer.send(new ProducerRecord<String,String>("ride-events", RideEventParser.toJSON(event).encode()));
+        logger.log(Level.INFO, "Inviato ride step");
     }
     
     private void sendRideEvent(RideEndedEvent event){
         this.producer.send(new ProducerRecord<String,String>("ride-events", RideEventParser.toJSON(event).encode()));
+        logger.log(Level.INFO, "Inviato evento ride end");
     }
 
     private void sendUserEvent(UserEvent event){

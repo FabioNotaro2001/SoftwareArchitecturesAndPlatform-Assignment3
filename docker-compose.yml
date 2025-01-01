@@ -143,6 +143,10 @@ services:
     container_name: kafka
     depends_on:
       - zookeeper
+      - apigateway
+      - registry
+      - users
+      - ebikes
     networks:
       - ebikapp_network
     ports:
