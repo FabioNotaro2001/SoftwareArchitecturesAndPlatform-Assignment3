@@ -93,9 +93,6 @@ public class RidesManagerImpl implements RidesManagerAPI {
             if(ebikeFromJSON(bike.get()).state() != EbikeState.AVAILABLE){
                 throw new IllegalArgumentException("Ebike " + ebikeID + " is not available!");
             }
-
-            // Update on ebikes service.
-            this.ebikesManager.updateBike(ebikeID, Optional.of(EbikeState.IN_USE), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
             
             Ride newRide = new Ride(String.valueOf(this.nextRideId), userFromJSON(user.get()), ebikeFromJSON(bike.get()));
             this.rides.add(newRide);

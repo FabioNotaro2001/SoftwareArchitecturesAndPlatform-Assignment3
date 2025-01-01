@@ -23,8 +23,8 @@ public class EventCollector {
     private static Logger logger = Logger.getLogger("[EVENT COLLECTOR]");
 
     public EventCollector(CustomKafkaListener listenerForUsers, CustomKafkaListener listenerForEbikes){
-        listenerForUsers.onEach(this::consumeUsersEvent);
-        listenerForEbikes.onEach(this::consumeEbikesEvent);
+        listenerForUsers.onEach(this::consumeUserEvents);
+        listenerForEbikes.onEach(this::consumeEbikeEvents);
         this.ready = false;
     }
 
@@ -64,7 +64,7 @@ public class EventCollector {
         return this.ready;
     }
 
-    private void consumeUsersEvent(String message){
+    private void consumeUserEvents(String message){
         JsonObject obj = new JsonObject(message);
         var event = UserEvent.from(obj.getString("userId"), obj.getInteger("credits"));
         String id = event.userId();
@@ -77,7 +77,7 @@ public class EventCollector {
         logger.log(Level.INFO, "User update: " + obj);
     }
 
-    private void consumeEbikesEvent(String message){
+    private void consumeEbikeEvents(String message){
         JsonObject obj = new JsonObject(message);
         var event = EbikeEvent.from(obj.getString("ebikeId"), Optional.ofNullable(obj.getString("newState")).map(EbikeState::valueOf),
                                     new V2d(obj.getDouble("deltaPosX"),obj.getDouble("deltaPosY")), new V2d(obj.getDouble("deltaDirX"),obj.getDouble("deltaDirY")),

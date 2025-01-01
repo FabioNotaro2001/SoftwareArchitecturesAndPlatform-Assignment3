@@ -155,10 +155,24 @@ public class RidesExecutionVerticle extends AbstractVerticle {
 
         var eventBus = this.vertx.eventBus();
 
+        this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(EbikeState.IN_USE), new V2d(0, 0), new V2d(0, 0), 0, 0));
+
         MessageConsumer<String> consumer = eventBus.<String>consumer(RIDES_STEP);
         consumer.handler(msg -> {
             var user = this.eventCollector.getUser(userID);
             var ebike = this.eventCollector.getEbike(ebikeID);
+
+            if(user == null || ebike == null){
+                logger.log(Level.INFO, "Utente o bici null!");
+                this.stopRideRequested.remove(rideID);
+                this.rides.remove(rideID);
+                this.timeVars.remove(rideID);
+                this.sendRideEvent(RideEndedEvent.from(rideID, RideStopReason.SERVICE_ERROR.reason));
+                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(EbikeState.AVAILABLE), new V2d(0, 0), new V2d(0, 0), 0, 0));
+                
+                consumer.unregister();
+                return;
+            }
 
             // Checks of the ride must be stopped.
             var stopRequestedOpt = Optional.ofNullable(this.stopRideRequested.get(rideID));
@@ -192,7 +206,7 @@ public class RidesExecutionVerticle extends AbstractVerticle {
                 var newDirX = dirX;
                 var newDirY = dirY;
 
-                var newBatteryLevel = ebike.batteryLevel(); // Battery level.
+                var batteryLevelDecrease = 0; // Battery level.
 
                 // Handle boundary conditions for bike's location.
                 if (newX > 200 || newX < -200) {
@@ -226,13 +240,13 @@ public class RidesExecutionVerticle extends AbstractVerticle {
                 // Decrease battery level every 1500 milliseconds.
                 var elapsedTimeSinceLastBatteryDecreased = System.currentTimeMillis() - timeVar.lastTimeBatteryDecreased();
                 if (elapsedTimeSinceLastBatteryDecreased > 1500) {
-                    newBatteryLevel--;
+                    batteryLevelDecrease--;
 
                     timeVar = timeVar.updateLastTimeBatteryDecreased(System.currentTimeMillis());
                 }
 
-                this.sendRideEvent(RideStepEvent.from(rideID, newX, newY, newDirX, newDirY, 1, newBatteryLevel));
-                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.empty(), new V2d(newX, newY), new V2d(newDirX, newDirY), 1.0, newBatteryLevel));
+                this.sendRideEvent(RideStepEvent.from(rideID, newX, newY, newDirX, newDirY, 1, batteryLevelDecrease));
+                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.empty(), new V2d(newX - oldX, newY - oldY), new V2d(newDirX - dirX, newDirY - dirY), 1.0 - ebike.speed(), batteryLevelDecrease));
 
                 this.timeVars.put(rideID, timeVar);
 
