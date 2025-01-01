@@ -13,10 +13,11 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import sap.ass2.rides.application.CustomKafkaListener;
 import sap.ass2.rides.application.RidesManagerAPI;
-import sap.ass2.rides.domain.RideEventObserver;
+import sap.ass2.rides.domain.RideEventConsumer;
 
-public class RidesManagerVerticle extends AbstractVerticle implements RideEventObserver {
+public class RidesManagerVerticle extends AbstractVerticle implements RideEventConsumer{
     private int port;
     private RidesManagerAPI ridesAPI;
     
@@ -26,17 +27,13 @@ public class RidesManagerVerticle extends AbstractVerticle implements RideEventO
     private static final String RIDE_ID_TYPE = "ride";
     private static final String USER_ID_TYPE = "user";
     private static final String EBIKE_ID_TYPE = "ebike";
-    
-    // Events that this verticle can publish.
-    private static final String START_EVENT = "ride-start";
-    private static final String STEP_EVENT = "ride-step";
-    private static final String END_EVENT = "ride-end";
 
     static Logger logger = Logger.getLogger("[Rides Manager Verticle]");	
     
-    public RidesManagerVerticle(int port, RidesManagerAPI ridesAPI) {
+    public RidesManagerVerticle(int port, RidesManagerAPI ridesAPI, CustomKafkaListener listener) {
         this.port = port;
         this.ridesAPI = ridesAPI;
+        listener.onEach(this::consumeEvents);
     }
 
     public void start() {
@@ -219,39 +216,11 @@ public class RidesManagerVerticle extends AbstractVerticle implements RideEventO
     }
 
     @Override
-    public void rideStarted(String rideID, String userID, String ebikeID) {
+    public void consumeEvents(String message) {
         var eventBus = vertx.eventBus();
-        var obj = new JsonObject()
-            .put("event", START_EVENT)
-            .put("rideId", rideID)
-            .put("userId", userID)
-            .put("ebikeId", ebikeID);
-        eventBus.publish(RIDES_MANAGER_EVENTS, obj);
-    }
+        var jsonObj = new JsonObject(message);
 
-    @Override
-    public void rideStep(String rideID, double x, double y, double directionX, double directionY, double speed, int batteryLevel) {
-        var eventBus = vertx.eventBus();
-        var obj = new JsonObject()
-            .put("event", STEP_EVENT)
-            .put("rideId", rideID)
-            .put("x", x)
-            .put("y", y)
-            .put("dirX", directionX)
-            .put("dirY", directionY)
-            .put("speed", speed)
-            .put("batteryLevel", batteryLevel);
-        eventBus.publish(RIDES_MANAGER_EVENTS, obj);
-    }
-
-    @Override
-    public void rideEnded(String rideID, String reason) {
-        var eventBus = vertx.eventBus();
-        var obj = new JsonObject()
-            .put("event", END_EVENT)
-            .put("rideId", rideID)
-            .put("reason", reason);
-        eventBus.publish(RIDES_MANAGER_EVENTS, obj);
+        eventBus.publish(RIDES_MANAGER_EVENTS, jsonObj);
     }
 
 }

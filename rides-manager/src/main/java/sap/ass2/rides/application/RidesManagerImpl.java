@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import org.apache.kafka.clients.producer.KafkaProducer;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -11,28 +14,25 @@ import io.vertx.core.json.JsonObject;
 import sap.ass2.rides.domain.Ebike;
 import sap.ass2.rides.domain.EbikeState;
 import sap.ass2.rides.domain.Ride;
-import sap.ass2.rides.domain.RideEventObserver;
 import sap.ass2.rides.domain.User;
 import sap.ass2.rides.infrastructure.RidesExecutionVerticle;
 
-public class RidesManagerImpl implements RidesManagerAPI, RideEventObserver {
+public class RidesManagerImpl implements RidesManagerAPI {
     private UsersManagerRemoteAPI usersManager; // Users service.
     private EbikesManagerRemoteAPI ebikesManager;   // Ebikes service.
     
     private List<Ride> rides;   // Ongoing rides.
     private int nextRideId;
-    private List<RideEventObserver> observers;  // observer = RidesManagerVerticle.
     private RidesExecutionVerticle rideExecutor;    // Verticle that manages and executes the rides.
 
-    public RidesManagerImpl(UsersManagerRemoteAPI usersManager, EbikesManagerRemoteAPI ebikesManager){
+    public RidesManagerImpl(UsersManagerRemoteAPI usersManager, EbikesManagerRemoteAPI ebikesManager, EventCollector eventCollector, KafkaProducer<String, String> producer){
         this.usersManager = usersManager;
         this.ebikesManager = ebikesManager;
         
         this.rides = Collections.synchronizedList(new ArrayList<>());
         this.nextRideId = 0;
-        this.observers = Collections.synchronizedList(new ArrayList<>());
 
-        this.rideExecutor = new RidesExecutionVerticle(this, usersManager, ebikesManager);
+        this.rideExecutor = new RidesExecutionVerticle(producer, eventCollector);
         this.rideExecutor.launch();
     }
 
@@ -138,26 +138,5 @@ public class RidesManagerImpl implements RidesManagerAPI, RideEventObserver {
     public Future<Optional<JsonObject>> getRideByUserID(String userID) {
         // succededFuture because we decided that every method should return a Future for consistency, so somewhere there is a succeededFuture to simulate a Future where normally it would not be needed.
         return Future.succeededFuture(this.rides.stream().filter(r -> r.getUser().id().equals(userID)).findFirst().map(RidesManagerImpl::toJSON));
-    }
-
-    @Override
-    public void subscribeToRideEvents(RideEventObserver observer) { // observer = RidesManagerVerticle.
-        this.observers.add(observer);
-    }
-
-    @Override
-    public void rideStarted(String rideID, String userID, String bikeID) {
-        this.observers.forEach(o -> o.rideStarted(rideID, userID, bikeID)); // observer = RidesManagerVerticle.
-    }
-
-    @Override
-    public void rideStep(String rideID, double x, double y, double directionX, double directionY, double speed, int batteryLevel) {
-        this.observers.forEach(o -> o.rideStep(rideID, x, y, directionX, directionY, speed, batteryLevel)); // observer = RidesManagerVerticle.
-    }
-
-    @Override
-    public void rideEnded(String rideID, String reason) {
-        this.observers.forEach(o -> o.rideEnded(rideID, reason));   // observer = RidesManagerVerticle.
-        this.rides.removeIf(r -> r.getId().equals(rideID));
     }
 }

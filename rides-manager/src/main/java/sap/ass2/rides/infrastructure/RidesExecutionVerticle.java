@@ -8,27 +8,26 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
-import sap.ass2.rides.application.EbikesManagerRemoteAPI;
-import sap.ass2.rides.application.UsersManagerRemoteAPI;
-import sap.ass2.rides.domain.Ebike;
+import sap.ass2.rides.application.EventCollector;
+import sap.ass2.rides.application.RideEventParser;
+import sap.ass2.rides.domain.EbikeEvent;
 import sap.ass2.rides.domain.EbikeState;
-import sap.ass2.rides.domain.RideEventObserver;
-import sap.ass2.rides.domain.User;
+import sap.ass2.rides.domain.RideEndedEvent;
+import sap.ass2.rides.domain.RideStartedEvent;
+import sap.ass2.rides.domain.RideStepEvent;
+import sap.ass2.rides.domain.UserEvent;
+import sap.ass2.rides.domain.V2d;
 
 public class RidesExecutionVerticle extends AbstractVerticle {
     // Events that this verticle can publish.
     private static String RIDES_STEP = "rides-step";
     private static String RIDE_STOP = "ride-stop";
-
-    private RideEventObserver observer;
-    private EbikesManagerRemoteAPI ebikesManager;   // Ebikes service.
-    private UsersManagerRemoteAPI usersManager; // Users service.
     private boolean doLoop = false;
 
     // The key is rideID for both.
@@ -41,19 +40,16 @@ public class RidesExecutionVerticle extends AbstractVerticle {
     static Logger logger = Logger.getLogger("[Rides Executor Verticle]");
 
     private KafkaProducer<String, String> producer;
-
-    public RidesExecutionVerticle(RideEventObserver observer, UsersManagerRemoteAPI usersManager, EbikesManagerRemoteAPI ebikesManager, KafkaProducer<String, String> producer) {
-        this.observer = observer;
-        this.usersManager = usersManager;
-        this.ebikesManager = ebikesManager;
-
+    private EventCollector eventCollector;
+    
+    public RidesExecutionVerticle(KafkaProducer<String, String> producer, EventCollector eventCollector) {
         this.rides = new ConcurrentHashMap<>();
         this.timeVars = new ConcurrentHashMap<>();
         this.stopRideRequested = new ConcurrentHashMap<>();
 
         this.loopConsumer = null;
         this.producer = producer;
-        // TODO SIAMO ARRIVATI QUIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII.
+        this.eventCollector = eventCollector;
     }
 
     public void launch() {
@@ -95,17 +91,43 @@ public class RidesExecutionVerticle extends AbstractVerticle {
             });
         });
     }
-
-    // Converts a JSON into an user.
-    private static User jsonObjToUser(JsonObject obj) {
-        return new User(obj.getString("userId"), obj.getInteger("credit"));
+    
+    private static JsonObject userEventToJSON(UserEvent event){
+        return new JsonObject()
+            .put("userId", event.userId())
+            .put("credits", event.creditDelta());
     }
 
-    // Converts a JSON into a bike.
-    private static Ebike jsonObjToEbike(JsonObject obj) {
-        return new Ebike(obj.getString("ebikeId"), EbikeState.valueOf(obj.getString("state")), obj.getDouble("x"),
-                obj.getDouble("y"), obj.getDouble("dirX"), obj.getDouble("dirY"), obj.getDouble("speed"),
-                obj.getInteger("batteryLevel"));
+    private static JsonObject ebikeEventToJSON(EbikeEvent event){
+        return new JsonObject()
+            .put("ebikeId", event.ebikeId())
+            .put("newState", event.newState().orElse(null))
+            .put("deltaPosX", event.deltaPos().x())
+            .put("deltaPosY", event.deltaPos().y())
+            .put("deltaDirX", event.deltaDir().x())
+            .put("deltaDirY", event.deltaDir().y())
+            .put("deltaSpeed", event.deltaSpeed())
+            .put("deltaBatteryLevel", event.deltaBatteryLevel());
+    }
+
+    private void sendRideEvent(RideStartedEvent event){
+        this.producer.send(new ProducerRecord<String,String>("ride-events", RideEventParser.toJSON(event).encode()));
+    }
+
+    private void sendRideEvent(RideStepEvent event){
+        this.producer.send(new ProducerRecord<String,String>("ride-events", RideEventParser.toJSON(event).encode()));
+    }
+    
+    private void sendRideEvent(RideEndedEvent event){
+        this.producer.send(new ProducerRecord<String,String>("ride-events", RideEventParser.toJSON(event).encode()));
+    }
+
+    private void sendUserEvent(UserEvent event){
+        this.producer.send(new ProducerRecord<String,String>("user-events", userEventToJSON(event).encode()));
+    }
+
+    private void sendEbikeEvent(EbikeEvent event){
+        this.producer.send(new ProducerRecord<String,String>("ebike-events", ebikeEventToJSON(event).encode()));
     }
 
     private void beginLoopOfEventsIfNecessary() {
@@ -135,120 +157,102 @@ public class RidesExecutionVerticle extends AbstractVerticle {
 
         MessageConsumer<String> consumer = eventBus.<String>consumer(RIDES_STEP);
         consumer.handler(msg -> {
-            var ebikeFuture = this.ebikesManager.getBikeByID(ebikeID);
-            var userFuture = this.usersManager.getUserByID(userID);
+            var user = this.eventCollector.getUser(userID);
+            var ebike = this.eventCollector.getEbike(ebikeID);
 
-            Future.all(ebikeFuture, userFuture)
-                .onSuccess(cf -> {
-                    // Checks of the ride must be stopped.
-                    var stopRequestedOpt = Optional.ofNullable(this.stopRideRequested.get(rideID));
-                    if (stopRequestedOpt.isPresent()) {
-                        this.stopRideRequested.remove(rideID);
-                        this.rides.remove(rideID);
-                        this.timeVars.remove(rideID);
-                        this.observer.rideEnded(rideID, stopRequestedOpt.get().reason);
+            // Checks of the ride must be stopped.
+            var stopRequestedOpt = Optional.ofNullable(this.stopRideRequested.get(rideID));
+            if (stopRequestedOpt.isPresent()) {
+                this.stopRideRequested.remove(rideID);
+                this.rides.remove(rideID);
+                this.timeVars.remove(rideID);
 
-                        Ebike ebike = jsonObjToEbike((cf.<Optional<JsonObject>>list().get(0)).get());
-                        this.ebikesManager.updateBike(ebikeID, Optional.ofNullable(ebike.batteryLevel() > 0 ? EbikeState.AVAILABLE : EbikeState.MAINTENANCE), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
-                        consumer.unregister();
-                        
-                        logger.log(Level.INFO, "Ride " + rideID + " stopped");
-                        return;
-                    }
+                this.sendRideEvent(RideEndedEvent.from(rideID, stopRequestedOpt.get().reason));
+                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(ebike.batteryLevel() > 0 ? EbikeState.AVAILABLE : EbikeState.MAINTENANCE), new V2d(0, 0), new V2d(0, 0), 0, 0));
+                consumer.unregister();
+                
+                logger.log(Level.INFO, "Ride " + rideID + " stopped");
+                return;
+            }
+            
+            TimeVariables timeVar = this.timeVars.get(rideID);
 
-                    List<Optional<JsonObject>> results = cf.list();
-                    Ebike ebike = jsonObjToEbike(results.get(0).get());
-                    User user = jsonObjToUser(results.get(1).get());
+            if (ebike.batteryLevel() > 0 && user.credit() > 0) {
+                // Get current location and direction of the bike.
+                var oldX = ebike.locX();
+                var oldY = ebike.locY();
+                var dirX = ebike.dirX();
+                var dirY = ebike.dirY();
+                var s = 1; // Speed of the bike
 
-                    TimeVariables timeVar = this.timeVars.get(rideID);
+                // Calculate new location based on direction.
+                var newX = oldX + dirX * s;
+                var newY = oldY + dirY * s;
 
-                    if (ebike.batteryLevel() > 0 && user.credit() > 0) {
-                        // Get current location and direction of the bike.
-                        var oldX = ebike.locX();
-                        var oldY = ebike.locY();
-                        var dirX = ebike.dirX();
-                        var dirY = ebike.dirY();
-                        var s = 1; // Speed of the bike
+                var newDirX = dirX;
+                var newDirY = dirY;
 
-                        // Calculate new location based on direction.
-                        var newX = oldX + dirX * s;
-                        var newY = oldY + dirY * s;
+                var newBatteryLevel = ebike.batteryLevel(); // Battery level.
 
-                        var newDirX = dirX;
-                        var newDirY = dirY;
+                // Handle boundary conditions for bike's location.
+                if (newX > 200 || newX < -200) {
+                    newDirX = -newDirX;
+                    newX = newX > 200 ? 200 : -200;
+                }
+                if (newY > 200 || newY < -200) {
+                    newDirY = -newDirY;
+                    newY = newY > 200 ? 200 : -200;
+                }
 
-                        var newBatteryLevel = ebike.batteryLevel(); // Battery level.
+                // Change direction randomly every 500 milliseconds.
+                var elapsedTimeSinceLastChangeDir = System.currentTimeMillis() - timeVar.lastTimeChangedDir();
+                if (elapsedTimeSinceLastChangeDir > 500) {
+                    double angle = Math.random() * 60 - 30; // Random angle between -30 and 30 degrees.
+                    var newDir = rotate(dirX, dirY, angle);
+                    newDirX = newDir.get(0);
+                    newDirY = newDir.get(1);
 
-                        // Handle boundary conditions for bike's location.
-                        if (newX > 200 || newX < -200) {
-                            newDirX = -newDirX;
-                            newX = newX > 200 ? 200 : -200;
-                        }
-                        if (newY > 200 || newY < -200) {
-                            newDirY = -newDirY;
-                            newY = newY > 200 ? 200 : -200;
-                        }
+                    timeVar = timeVar.updateLastTimeChangedDir(System.currentTimeMillis());
+                }
 
-                        // Change direction randomly every 500 milliseconds.
-                        var elapsedTimeSinceLastChangeDir = System.currentTimeMillis() - timeVar.lastTimeChangedDir();
-                        if (elapsedTimeSinceLastChangeDir > 500) {
-                            double angle = Math.random() * 60 - 30; // Random angle between -30 and 30 degrees.
-                            var newDir = rotate(dirX, dirY, angle);
-                            newDirX = newDir.get(0);
-                            newDirY = newDir.get(1);
+                // Update user credits every 2000 milliseconds.
+                var elapsedTimeSinceLastDecredit = System.currentTimeMillis() - timeVar.lastTimeDecreasedCredit();
+                if (elapsedTimeSinceLastDecredit > 2000) {
+                    this.sendUserEvent(UserEvent.from(userID, -1));
 
-                            timeVar = timeVar.updateLastTimeChangedDir(System.currentTimeMillis());
-                        }
+                    timeVar = timeVar.updateLastTimeDecreasedCredit(System.currentTimeMillis());
+                }
 
-                        // Update user credits every 2000 milliseconds.
-                        var elapsedTimeSinceLastDecredit = System.currentTimeMillis() - timeVar.lastTimeDecreasedCredit();
-                        if (elapsedTimeSinceLastDecredit > 2000) {
-                            usersManager.decreaseCredit(userID, 1);
+                // Decrease battery level every 1500 milliseconds.
+                var elapsedTimeSinceLastBatteryDecreased = System.currentTimeMillis() - timeVar.lastTimeBatteryDecreased();
+                if (elapsedTimeSinceLastBatteryDecreased > 1500) {
+                    newBatteryLevel--;
 
-                            timeVar = timeVar.updateLastTimeDecreasedCredit(System.currentTimeMillis());
-                        }
+                    timeVar = timeVar.updateLastTimeBatteryDecreased(System.currentTimeMillis());
+                }
 
-                        // Decrease battery level every 1500 milliseconds.
-                        var elapsedTimeSinceLastBatteryDecreased = System.currentTimeMillis() - timeVar.lastTimeBatteryDecreased();
-                        if (elapsedTimeSinceLastBatteryDecreased > 1500) {
-                            newBatteryLevel--;
+                this.sendRideEvent(RideStepEvent.from(rideID, newX, newY, newDirX, newDirY, 1, newBatteryLevel));
+                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.empty(), new V2d(newX, newY), new V2d(newDirX, newDirY), 1.0, newBatteryLevel));
 
-                            timeVar = timeVar.updateLastTimeBatteryDecreased(System.currentTimeMillis());
-                        }
+                this.timeVars.put(rideID, timeVar);
 
-                        // Notify observer about the current ride status.
-                        this.observer.rideStep(rideID, newX, newY, newDirX, newDirY, 1, newBatteryLevel);
+                logger.log(Level.INFO, "Ride " + rideID + " event");
+            } else {
+                // The ride cannot proceed (insufficient credit or battery level).
+                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(ebike.batteryLevel() > 0 ? EbikeState.AVAILABLE : EbikeState.MAINTENANCE), new V2d(0, 0), new V2d(0, 0), 0, 0));
 
-                        this.ebikesManager.updateBike(ebikeID, Optional.empty(),
-                            Optional.of(newX), Optional.of(newY),
-                            Optional.of(newDirX), Optional.of(newDirY),
-                            Optional.of(1.0), Optional.of(newBatteryLevel));
+                this.rides.remove(rideID);
+                this.timeVars.remove(rideID);
+                this.stopRideRequested.remove(rideID);
+                this.sendRideEvent(RideEndedEvent.from(rideID, (ebike.batteryLevel() > 0 ? RideStopReason.USER_RAN_OUT_OF_CREDIT : RideStopReason.EBIKE_RAN_OUT_OF_BATTERY).reason));
+                consumer.unregister();
 
-                        this.timeVars.put(rideID, timeVar);
-
-                        logger.log(Level.INFO, "Ride " + rideID + " event");
-                    } else {
-                        // The ride cannot proceed (insufficient credit or battery level).
-                        this.ebikesManager.updateBike(ebikeID, Optional.of(ebike.batteryLevel() > 0 ? EbikeState.AVAILABLE : EbikeState.MAINTENANCE),
-                            Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
-
-                        this.rides.remove(rideID);
-                        this.timeVars.remove(rideID);
-                        this.stopRideRequested.remove(rideID);
-                        this.observer.rideEnded(rideID, (ebike.batteryLevel() > 0 ? RideStopReason.USER_RAN_OUT_OF_CREDIT : RideStopReason.EBIKE_RAN_OUT_OF_BATTERY).reason);
-                        consumer.unregister();
-
-                        logger.log(Level.INFO, "Ride " + rideID + " ended");
-                    }
-                })
-                .onFailure(ex -> {
-                    this.observer.rideEnded(rideID, RideStopReason.SERVICE_ERROR.reason);
-                    consumer.unregister();
-                });
+                logger.log(Level.INFO, "Ride " + rideID + " ended");
+            }
         });
 
         this.rides.put(rideID, consumer);
-        this.observer.rideStarted(rideID, userID, ebikeID);
+        this.sendRideEvent(RideStartedEvent.from(rideID, userID, ebikeID));
         this.beginLoopOfEventsIfNecessary();
     }
 
