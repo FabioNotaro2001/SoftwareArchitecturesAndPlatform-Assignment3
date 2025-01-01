@@ -35,7 +35,7 @@ public class RidesManagerService {
         this.usersListener = new CustomKafkaListener("user-events", KafkaConsumerFactory.defaultConsumer());
         this.ebikesListener = new CustomKafkaListener("ebike-events", KafkaConsumerFactory.defaultConsumer());
         this.eventCollector = new EventCollector(usersListener, ebikesListener);
-        this.ridesManager = new RidesManagerImpl(usersManager, ebikesManager, this.eventCollector, KafkaProducerFactory.kafkaProducer());
+        this.ridesManager = new RidesManagerImpl(this.eventCollector, KafkaProducerFactory.kafkaProducer(), this.ridesListener);
 
         var futureForUsers = usersManager.getAllUsers();
         var futureForEbikes = ebikesManager.getAllEbikes();

@@ -155,7 +155,7 @@ public class RidesExecutionVerticle extends AbstractVerticle {
 
         var eventBus = this.vertx.eventBus();
 
-        this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(EbikeState.IN_USE), new V2d(0, 0), new V2d(0, 0), 0, 0));
+        this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(EbikeState.IN_USE), new V2d(0, 0), new V2d(0, 0), 1, 0));
 
         MessageConsumer<String> consumer = eventBus.<String>consumer(RIDES_STEP);
         consumer.handler(msg -> {
@@ -168,7 +168,7 @@ public class RidesExecutionVerticle extends AbstractVerticle {
                 this.rides.remove(rideID);
                 this.timeVars.remove(rideID);
                 this.sendRideEvent(RideEndedEvent.from(rideID, RideStopReason.SERVICE_ERROR.reason));
-                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(EbikeState.AVAILABLE), new V2d(0, 0), new V2d(0, 0), 0, 0));
+                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(EbikeState.AVAILABLE), new V2d(0, 0), new V2d(0, 0), -ebike.speed(), 0));
                 
                 consumer.unregister();
                 return;
@@ -182,7 +182,7 @@ public class RidesExecutionVerticle extends AbstractVerticle {
                 this.timeVars.remove(rideID);
 
                 this.sendRideEvent(RideEndedEvent.from(rideID, stopRequestedOpt.get().reason));
-                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(ebike.batteryLevel() > 0 ? EbikeState.AVAILABLE : EbikeState.MAINTENANCE), new V2d(0, 0), new V2d(0, 0), 0, 0));
+                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(ebike.batteryLevel() > 0 ? EbikeState.AVAILABLE : EbikeState.MAINTENANCE), new V2d(0, 0), new V2d(0, 0), -ebike.speed(), 0));
                 consumer.unregister();
                 
                 logger.log(Level.INFO, "Ride " + rideID + " stopped");
@@ -246,14 +246,14 @@ public class RidesExecutionVerticle extends AbstractVerticle {
                 }
 
                 this.sendRideEvent(RideStepEvent.from(rideID, newX, newY, newDirX, newDirY, 1, batteryLevelDecrease));
-                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.empty(), new V2d(newX - oldX, newY - oldY), new V2d(newDirX - dirX, newDirY - dirY), 1.0 - ebike.speed(), batteryLevelDecrease));
+                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.empty(), new V2d(newX - oldX, newY - oldY), new V2d(newDirX - dirX, newDirY - dirY), 0, batteryLevelDecrease));
 
                 this.timeVars.put(rideID, timeVar);
 
                 logger.log(Level.INFO, "Ride " + rideID + " event");
             } else {
                 // The ride cannot proceed (insufficient credit or battery level).
-                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(ebike.batteryLevel() > 0 ? EbikeState.AVAILABLE : EbikeState.MAINTENANCE), new V2d(0, 0), new V2d(0, 0), 0, 0));
+                this.sendEbikeEvent(EbikeEvent.from(ebikeID, Optional.ofNullable(ebike.batteryLevel() > 0 ? EbikeState.AVAILABLE : EbikeState.MAINTENANCE), new V2d(0, 0), new V2d(0, 0), -ebike.speed(), 0));
 
                 this.rides.remove(rideID);
                 this.timeVars.remove(rideID);
