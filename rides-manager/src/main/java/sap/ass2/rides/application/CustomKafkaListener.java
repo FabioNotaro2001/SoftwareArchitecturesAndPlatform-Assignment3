@@ -31,9 +31,14 @@ public class CustomKafkaListener implements Runnable {
             consumer.subscribe(this.topics);
             while (true) {
                 consumer.poll(Duration.ofMillis(100))
-                  .forEach(record -> this.recordConsumers.get(record.topic()).accept(record.value()));
+                  .forEach(record -> {
+                    try{
+                        this.recordConsumers.get(record.topic()).accept(record.value());
+                    } catch(Exception e){
+                        logger.log(Level.SEVERE, "Exception", e);
+                    }
+                });
             }
-
         } catch(Exception e){
             logger.log(Level.SEVERE, "Exception", e);
         }

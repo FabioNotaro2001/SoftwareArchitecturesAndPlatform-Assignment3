@@ -1,7 +1,5 @@
 package sap.ass2.ebikes.application;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -120,8 +118,6 @@ public class EbikesManagerImpl implements EbikesManagerAPI, EbikeEventsConsumer 
         if (state.isPresent()) {
             newState = Optional.of(state.get());
         }
-
-        var currentState = state.orElse(ebike.getState());
 
         var deltaPos = V2d.zero();
         if (locationX.isPresent()) {
