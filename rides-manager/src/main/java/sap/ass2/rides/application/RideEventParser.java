@@ -10,15 +10,15 @@ public class RideEventParser {
     private RideEventParser(){}
 
     public static RideEvent from(JsonObject obj){
-        switch (obj.getString("eventType")) {
-            case "ride-started":
+        switch (obj.getString("event")) {
+            case "ride-start":
                 return new RideStartedEvent(obj.getString("rideId"), obj.getString("userId"), obj.getString("bikeId"));
             case "ride-step":
-                return new RideStepEvent(obj.getString("rideId"), obj.getDouble("x"), obj.getDouble(null), obj.getDouble("dirX"), obj.getDouble("dirY"), obj.getDouble("speed"), obj.getInteger("batteryLevel"));
-            case "ride-ended":
+                return new RideStepEvent(obj.getString("rideId"), obj.getDouble("x"), obj.getDouble("y"), obj.getDouble("dirX"), obj.getDouble("dirY"), obj.getDouble("speed"), obj.getInteger("batteryLevel"));
+            case "ride-end":
                 return new RideEndedEvent(obj.getString("rideId"), obj.getString("reason"));
             default:
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("Invalid event type: " + obj.getString("event"));
         }
     } 
 

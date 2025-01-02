@@ -30,7 +30,7 @@ public class RidesManagerImpl implements RidesManagerAPI, RideEventConsumer {
         this.rideExecutor = new RidesExecutionVerticle(producer, this.eventCollector);
         this.rideExecutor.launch();
 
-        listener.onEach(this::consumeEvents);
+        listener.onEach("ride-events", this::consumeEvents);
     }
 
     // Converts a ride to a JSON.

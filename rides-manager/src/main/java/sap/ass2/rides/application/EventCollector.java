@@ -22,9 +22,9 @@ public class EventCollector {
     private boolean ready;
     private static Logger logger = Logger.getLogger("[EVENT COLLECTOR]");
 
-    public EventCollector(CustomKafkaListener listenerForUsers, CustomKafkaListener listenerForEbikes){
-        listenerForUsers.onEach(this::consumeUserEvents);
-        listenerForEbikes.onEach(this::consumeEbikeEvents);
+    public EventCollector(CustomKafkaListener listener){
+        listener.onEach("user-events", this::consumeUserEvents);
+        listener.onEach("ebike-events", this::consumeEbikeEvents);
         this.ready = false;
     }
 

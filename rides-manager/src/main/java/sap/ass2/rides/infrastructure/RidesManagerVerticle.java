@@ -32,7 +32,7 @@ public class RidesManagerVerticle extends AbstractVerticle implements RideEventC
     public RidesManagerVerticle(int port, RidesManagerAPI ridesAPI, CustomKafkaListener listener) {
         this.port = port;
         this.ridesAPI = ridesAPI;
-        listener.onEach(this::consumeEvents);
+        listener.onEach("ride-events", this::consumeEvents);
     }
 
     public void start() {

@@ -3,7 +3,6 @@ package sap.ass2.rides;
 import java.net.URL;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import io.vertx.core.Future;
@@ -22,20 +21,16 @@ public class RidesManagerService {
     private RidesManagerAPI ridesManager;
     private RidesManagerController ridesController;
     private URL localAddress;
-    private CustomKafkaListener ridesListener;
-    private CustomKafkaListener usersListener;
-    private CustomKafkaListener ebikesListener;
+    private CustomKafkaListener listener;
     private EventCollector eventCollector;
     private static Logger logger = Logger.getLogger("[RIDES MANAGER]");
 
     public RidesManagerService(URL localAddress, UsersManagerRemoteAPI usersManager, EbikesManagerRemoteAPI ebikesManager) {
         this.localAddress = localAddress;
 
-        this.ridesListener = new CustomKafkaListener("ride-events", KafkaConsumerFactory.defaultConsumer());
-        this.usersListener = new CustomKafkaListener("user-events", KafkaConsumerFactory.defaultConsumer());
-        this.ebikesListener = new CustomKafkaListener("ebike-events", KafkaConsumerFactory.defaultConsumer());
-        this.eventCollector = new EventCollector(usersListener, ebikesListener);
-        this.ridesManager = new RidesManagerImpl(this.eventCollector, KafkaProducerFactory.kafkaProducer(), this.ridesListener);
+        this.listener = new CustomKafkaListener(KafkaConsumerFactory.defaultConsumer(), "ride-events", "user-events", "ebike-events");
+        this.eventCollector = new EventCollector(this.listener);
+        this.ridesManager = new RidesManagerImpl(this.eventCollector, KafkaProducerFactory.kafkaProducer(), this.listener);
 
         var futureForUsers = usersManager.getAllUsers();
         var futureForEbikes = ebikesManager.getAllEbikes();
@@ -45,15 +40,13 @@ public class RidesManagerService {
             eventCollector.init(results.get(0), results.get(1));
         });
 
-        this.ridesListener.onEach(e -> logger.log(Level.INFO, "Received event: " + e));
+        //this.listener.onEach(e -> logger.log(Level.INFO, "Received event: " + e));
     }
 
     public void launch(){
         // Starts the ride controller (so that it can start the RidesExecutionVerticle).
         this.ridesController = new RidesManagerController(this.localAddress.getPort());
-        this.ridesController.init(this.ridesManager, this.ridesListener);
-        CompletableFuture.runAsync(ridesListener);
-        CompletableFuture.runAsync(usersListener);
-        CompletableFuture.runAsync(ebikesListener);
+        this.ridesController.init(this.ridesManager, this.listener);
+        CompletableFuture.runAsync(this.listener);
     }
 }
