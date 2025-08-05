@@ -2,18 +2,18 @@
 
 ## Overview
 
-This project is an implementation of a microservices-based architecture designed for a Software Architectures and Platform course. It simulates a system involving users, rides, and e-bikes, with an API Gateway facilitating communication between services. The system is containerized using Docker and orchestrated with Kubernetes for deployment.
+This project is an implementation of a microservices-based architecture designed for a Software Architectures and Platform course. It simulates a system involving users, rides and e-bikes, with an API Gateway facilitating communication between services. The system is containerized using Docker and orchestrated with Kubernetes for deployment.
 
 ## Architecture
 
 The system comprises the following components:
 
-- **API Gateway**: Manages incoming requests and routes them to appropriate services.
-- **Users Manager**: Handles user-related operations.
-- **Rides Manager**: Manages ride-related functionalities.
-- **E-Bikes Manager**: Oversees e-bike operations.
-- **Admin GUI**: Provides an administrative interface for managing the system.
-- **User GUI**: Offers a user interface for end-users to interact with the system.
+- **API Gateway** -> manages incoming requests and routes them to appropriate services
+- **Users Manager** -> handles user-related operations
+- **Rides Manager** -> manages ride-related functionalities
+- **E-Bikes Manager** -> oversees e-bike operations
+- **Admin GUI** -> provides an administrative interface for managing the system
+- **User GUI** -> offers a user interface for end-users to interact with the system.
 
 Each component is containerized and deployed using Kubernetes manifests.
 
